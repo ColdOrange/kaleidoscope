@@ -3,12 +3,12 @@ use core::slice;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Token {
+pub enum Token<'a> {
     // keywords
     Def,
     Extern,
     // primary
-    Identifier(String),
+    Identifier(&'a str),
     Number(f64),
     // symbol
     Symbol(char),
@@ -89,9 +89,9 @@ impl<'b> Lexer<'b> {
 }
 
 impl<'b> Iterator for Lexer<'b> {
-    type Item = Token;
+    type Item = Token<'b>;
 
-    fn next(&mut self) -> Option<Token> {
+    fn next(&mut self) -> Option<Token<'b>> {
         self.skip_whitespace();
 
         match self.peek() {
@@ -108,7 +108,7 @@ impl<'b> Iterator for Lexer<'b> {
                 if KEYWORDS.contains_key(i) {
                     Some(KEYWORDS.get(i).unwrap().clone())
                 } else {
-                    Some(Token::Identifier(i.to_string()))
+                    Some(Token::Identifier(i))
                 }
             },
             // number
@@ -127,7 +127,7 @@ impl<'b> Iterator for Lexer<'b> {
 }
 
 lazy_static! {
-    static ref KEYWORDS: HashMap<&'static str, Token> = {
+    static ref KEYWORDS: HashMap<&'static str, Token<'static>> = {
         let mut m = HashMap::new();
         m.insert("def", Token::Def);
         m.insert("extern", Token::Extern);
@@ -154,31 +154,31 @@ fib(40)
 ");
 
         assert_eq!(lexer.next().unwrap(), Token::Def);
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib"));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('('));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("x".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("x"));
         assert_eq!(lexer.next().unwrap(), Token::Symbol(')'));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("if".to_string()));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("x".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("if"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("x"));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('<'));
         assert_eq!(lexer.next().unwrap(), Token::Number(3.0));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("then".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("then"));
         assert_eq!(lexer.next().unwrap(), Token::Number(1.0));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("else".to_string()));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("else"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib"));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('('));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("x".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("x"));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('-'));
         assert_eq!(lexer.next().unwrap(), Token::Number(1.0));
         assert_eq!(lexer.next().unwrap(), Token::Symbol(')'));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('+'));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib"));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('('));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("x".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("x"));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('-'));
         assert_eq!(lexer.next().unwrap(), Token::Number(2.0));
         assert_eq!(lexer.next().unwrap(), Token::Symbol(')'));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib"));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('('));
         assert_eq!(lexer.next().unwrap(), Token::Number(40.0));
         assert_eq!(lexer.next().unwrap(), Token::Symbol(')'));
