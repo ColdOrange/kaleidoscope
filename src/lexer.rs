@@ -1,14 +1,14 @@
-use std::str;
 use core::slice;
+use std::str;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Token<'a> {
+pub enum Token {
     // keywords
     Def,
     Extern,
     // primary
-    Identifier(&'a str),
+    Identifier(String),
     Number(f64),
     // symbol
     Symbol(char),
@@ -21,7 +21,7 @@ pub struct Lexer<'b> {
 
 impl<'b> Lexer<'b> {
     #[inline]
-    fn new(buf: &'b str) -> Lexer<'b> {
+    pub fn new(buf: &'b str) -> Lexer<'b> {
         Lexer {
             buf: buf,
             pos: 0,
@@ -89,9 +89,9 @@ impl<'b> Lexer<'b> {
 }
 
 impl<'b> Iterator for Lexer<'b> {
-    type Item = Token<'b>;
+    type Item = Token;
 
-    fn next(&mut self) -> Option<Token<'b>> {
+    fn next(&mut self) -> Option<Token> {
         self.skip_whitespace();
 
         match self.peek() {
@@ -101,21 +101,21 @@ impl<'b> Iterator for Lexer<'b> {
             Some('#') => {
                 self.skip_line();
                 self.next()
-            },
+            }
             // identifier
             Some(c) if c.is_alphabetic() => {
                 let i = self.identifier();
                 if KEYWORDS.contains_key(i) {
                     Some(KEYWORDS.get(i).unwrap().clone())
                 } else {
-                    Some(Token::Identifier(i))
+                    Some(Token::Identifier(i.to_string()))
                 }
-            },
+            }
             // number
             Some(c) if c.is_ascii_digit() || c == '.' => {
                 let n = self.number().parse::<f64>().unwrap();
                 Some(Token::Number(n))
-            },
+            }
             // symbol
             _ => {
                 let s = unsafe { *self.buf.as_bytes().get_unchecked(self.pos) as char };
@@ -127,7 +127,7 @@ impl<'b> Iterator for Lexer<'b> {
 }
 
 lazy_static! {
-    static ref KEYWORDS: HashMap<&'static str, Token<'static>> = {
+    static ref KEYWORDS: HashMap<&'static str, Token> = {
         let mut m = HashMap::new();
         m.insert("def", Token::Def);
         m.insert("extern", Token::Extern);
@@ -154,31 +154,31 @@ fib(40)
 ");
 
         assert_eq!(lexer.next().unwrap(), Token::Def);
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib".to_string()));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('('));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("x"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("x".to_string()));
         assert_eq!(lexer.next().unwrap(), Token::Symbol(')'));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("if"));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("x"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("if".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("x".to_string()));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('<'));
         assert_eq!(lexer.next().unwrap(), Token::Number(3.0));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("then"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("then".to_string()));
         assert_eq!(lexer.next().unwrap(), Token::Number(1.0));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("else"));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("else".to_string()));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib".to_string()));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('('));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("x"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("x".to_string()));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('-'));
         assert_eq!(lexer.next().unwrap(), Token::Number(1.0));
         assert_eq!(lexer.next().unwrap(), Token::Symbol(')'));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('+'));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib".to_string()));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('('));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("x"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("x".to_string()));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('-'));
         assert_eq!(lexer.next().unwrap(), Token::Number(2.0));
         assert_eq!(lexer.next().unwrap(), Token::Symbol(')'));
-        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib"));
+        assert_eq!(lexer.next().unwrap(), Token::Identifier("fib".to_string()));
         assert_eq!(lexer.next().unwrap(), Token::Symbol('('));
         assert_eq!(lexer.next().unwrap(), Token::Number(40.0));
         assert_eq!(lexer.next().unwrap(), Token::Symbol(')'));

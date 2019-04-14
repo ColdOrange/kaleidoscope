@@ -2,3 +2,5 @@
 extern crate lazy_static;
 
 mod lexer;
+mod parser;
+mod ast;
