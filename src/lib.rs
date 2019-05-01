@@ -2,6 +2,7 @@
 extern crate lazy_static;
 extern crate llvm_sys as llvm;
 
-mod lexer;
-mod parser;
-mod ast;
+pub mod lexer;
+pub mod parser;
+pub mod ast;
+pub mod jit;

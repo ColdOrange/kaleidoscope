@@ -4,6 +4,8 @@ use std::os::raw::c_uint;
 
 use llvm::prelude::*;
 use llvm::core::*;
+use llvm::target::*;
+use llvm::transforms::scalar::*;
 
 use crate::lexer::{Lexer, Token};
 use crate::ast::{AST, Expr, NumberExpr, VariableExpr, BinaryExpr, CallExpr, Prototype, Function};
@@ -21,8 +23,19 @@ pub struct Parser<'b> {
 }
 
 impl<'b> Parser<'b> {
-    #[inline]
     pub fn new(buf: &'b str) -> Parser<'b> {
+        unsafe {
+            if LLVM_InitializeNativeTarget() != 0 {
+                panic!("initialize native target failed");
+            }
+            if LLVM_InitializeNativeAsmPrinter() != 0 {
+                panic!("initialize native asm printer failed");
+            }
+            if LLVM_InitializeNativeAsmParser() != 0 {
+                panic!("initialize native asm parser failed");
+            }
+        }
+
         let context = unsafe {
             LLVMContextCreate()
         };
@@ -35,6 +48,16 @@ impl<'b> Parser<'b> {
         let function_pass_manager = unsafe {
             LLVMCreateFunctionPassManagerForModule(module)
         };
+        unsafe {
+            // optimization passes
+            LLVMAddBasicAliasAnalysisPass(function_pass_manager);
+            LLVMAddInstructionCombiningPass(function_pass_manager);
+            LLVMAddReassociatePass(function_pass_manager);
+            LLVMAddGVNPass(function_pass_manager);
+            LLVMAddCFGSimplificationPass(function_pass_manager);
+
+            LLVMInitializeFunctionPassManager(function_pass_manager);
+        }
 
         Parser {
             lexer: Lexer::new(buf),
@@ -48,6 +71,9 @@ impl<'b> Parser<'b> {
             function_pass_manager: function_pass_manager,
         }
     }
+
+    #[inline]
+    pub fn token(&self) -> Option<Token> { self.token.clone() }
 
     #[inline]
     pub fn context(&self) -> LLVMContextRef { self.context }
@@ -96,7 +122,7 @@ impl<'b> Parser<'b> {
     }
 
     #[inline]
-    fn get_next_token(&mut self) {
+    pub fn get_next_token(&mut self) {
         self.token = self.lexer.next();
     }
 
@@ -131,7 +157,7 @@ impl<'b> Parser<'b> {
     }
 
     // definition ::= 'def' prototype expression
-    fn parse_definition(&mut self) -> Box<Function> {
+    pub fn parse_definition(&mut self) -> Box<Function> {
         assert_eq!(self.token, Some(Token::Def));
         self.get_next_token();
 
@@ -173,7 +199,7 @@ impl<'b> Parser<'b> {
     }
 
     // extern ::= 'extern' prototype
-    fn parse_extern(&mut self) -> Box<Prototype> {
+    pub fn parse_extern(&mut self) -> Box<Prototype> {
         assert_eq!(self.token, Some(Token::Extern));
         self.get_next_token();
 
@@ -181,7 +207,7 @@ impl<'b> Parser<'b> {
     }
 
     // expression ::= primary binoprhs
-    fn parse_expression(&mut self) -> Box<Expr> {
+    pub fn parse_expression(&mut self) -> Box<Expr> {
         let lhs = self.parse_primary();
         self.parse_binoprhs(lhs, 0)
     }
@@ -225,9 +251,7 @@ impl<'b> Parser<'b> {
             }
             Some(Token::Symbol('(')) => {
                 self.get_next_token();
-
                 let expr = self.parse_expression();
-                self.get_next_token();
 
                 if self.token == Some(Token::Symbol(')')) {
                     self.get_next_token();
